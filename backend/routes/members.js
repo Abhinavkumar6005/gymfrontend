@@ -1,11 +1,11 @@
 const router = require('express').Router();
 const { getAllMembers, createMember, updateMember, deleteMember, getExpiringMembers } = require('../controller/memberController');
-const { adminMiddleware } = require('../middleware/auth');
+const { adminMiddleware ,authMiddleware} = require('../middleware/auth');
 
-router.get('/', adminMiddleware,getAllMembers);
-router.get('/expiring',adminMiddleware, getExpiringMembers);
-router.post('/', adminMiddleware, createMember);
-router.put('/:id', adminMiddleware, updateMember);
-router.delete('/:id', adminMiddleware, deleteMember);
+router.get('/', authMiddleware,adminMiddleware,getAllMembers);
+router.get('/expiring',authMiddleware, adminMiddleware, getExpiringMembers);
+router.post('/', authMiddleware, adminMiddleware, createMember);
+router.put('/:id', authMiddleware, adminMiddleware, updateMember);
+router.delete('/:id', authMiddleware, adminMiddleware, deleteMember);
 
 module.exports = router;

@@ -10,9 +10,23 @@ const getAllMembers = async (req, res) => {
   }
 };
 
+// const createMember = async (req, res) => {
+//   try {
+//     console.log("----", req.body);
+//     const member = new Member(req.body);
+//     await member.save();
+//     res.status(201).json(member);
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// };
+
 const createMember = async (req, res) => {
   try {
-    const member = new Member(req.body);
+    const member = new Member({
+      ...req.body,
+      fullName: req.body.fullName || req.body.name,
+    });
     await member.save();
     res.status(201).json(member);
   } catch (error) {
