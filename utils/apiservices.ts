@@ -192,9 +192,52 @@ class ApiService {
   }
 
   /** DELETE — requires auth */
-  delete(endpoint: string): Promise<any> {
-    return this.request(endpoint, { method: 'DELETE' });
+ // In your ApiService class, replace the existing delete method with this:
+
+/** DELETE — requires auth (can include body) */
+delete(endpoint: string, body?: Record<string, unknown>): Promise<any> {
+  const options: RequestInit = { method: 'DELETE' };
+  if (body) {
+    options.body = JSON.stringify(body);
   }
+  return this.request(endpoint, options);
+}
+  
+
+
+  
+  /** POST FormData — requires auth (file uploads) */
+  postFormData(endpoint: string, body: FormData): Promise<any> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const token = this.token || getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(url, { method: 'POST', headers, body })
+      .then(async (res) => {
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!res.ok) throw new Error(data.error || data.message || `Request failed: ${res.status}`);
+        return data;
+      });
+  }
+
+  /** PUT FormData — requires auth (file uploads) */
+  putFormData(endpoint: string, body: FormData): Promise<any> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const token = this.token || getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetch(url, { method: 'PUT', headers, body })
+      .then(async (res) => {
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!res.ok) throw new Error(data.error || data.message || `Request failed: ${res.status}`);
+        return data;
+      });
+  }
+
+
+  
 }
 
 export const apiService = new ApiService();

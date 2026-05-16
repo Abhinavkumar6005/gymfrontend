@@ -2,59 +2,10 @@
 
 import { useState } from "react";
 import PlansDisplay from "./PlansDisplay";
+import TrainersDisplay from "./components/TrainersDisplay";
+import { useRouter } from "next/navigation";
 
-const plans = [
-  {
-    id: "trial",
-    name: "Trial",
-    duration: "1 Month",
-    tag: "Try it out",
-    price: 999,
-    color: "#C8F542",
-    features: ["Full gym access", "1 trainer session", "Locker room", "Basic classes"],
-    highlight: false,
-  },
-  {
-    id: "starter",
-    name: "Starter",
-    duration: "2 Months",
-    tag: null,
-    price: 1799,
-    color: "#ffffff",
-    features: ["Full gym access", "2 trainer sessions", "Locker room", "All classes", "Body assessment"],
-    highlight: false,
-  },
-  {
-    id: "grind",
-    name: "Grind",
-    duration: "6 Months",
-    tag: "Most Popular",
-    price: 4499,
-    color: "#C8F542",
-    features: ["Full gym access", "6 trainer sessions", "Locker room", "All classes", "Body assessment", "Nutrition plan", "Progress tracking"],
-    highlight: true,
-  },
-  {
-    id: "beast",
-    name: "Beast",
-    duration: "8 Months",
-    tag: null,
-    price: 5799,
-    color: "#ffffff",
-    features: ["Full gym access", "10 trainer sessions", "Locker room", "All classes", "Body assessment", "Nutrition plan", "Progress tracking", "Guest passes (2)"],
-    highlight: false,
-  },
-  {
-    id: "elite",
-    name: "Elite",
-    duration: "12 Months",
-    tag: "Best Value",
-    price: 7999,
-    color: "#C8F542",
-    features: ["Full gym access", "Unlimited trainer sessions", "Locker room", "All classes", "Body assessment", "Nutrition plan", "Progress tracking", "Guest passes (5)", "Priority booking"],
-    highlight: false,
-  },
-];
+
 
 const stats = [
   { val: "12K+", label: "Active Members" },
@@ -65,6 +16,7 @@ const stats = [
 
 export default function Home() {
   const [hovered, setHovered] = useState<string | null>(null);
+  const router = useRouter();
 
   return (
     <div style={{ fontFamily: "'Bebas Neue', 'Impact', sans-serif", background: "#0a0a0a", color: "#fff", minHeight: "100vh", overflowX: "hidden" }}>
@@ -210,12 +162,14 @@ export default function Home() {
       <nav className="nav">
         <div className="nav-logo">IRONFORGE</div>
         <div className="nav-links">
-          <a href="#">About</a>
-          <a href="#">Classes</a>
-          <a href="#">Trainers</a>
-          <a href="#">Plans</a>
+          <a href="#about">About</a>
+          <a href="#classes">Classes</a>
+          <a href="#trainer">Trainers</a>
+          <a href="#plans">Plans</a>
         </div>
-        <button className="nav-cta">Join Now</button>
+        <button className="nav-cta" onClick={() => router.push('/admin-login')}>
+          Admin Login
+        </button>
       </nav>
 
       {/* HERO */}
@@ -227,11 +181,115 @@ export default function Home() {
         </h1>
         <p className="hero-sub">Premium Fitness · Est. 2018 · Ludhiana</p>
         <div className="hero-actions">
-          <button className="btn-primary">Start Today</button>
-          <button className="btn-outline">View Plans</button>
+          <button className="btn-primary">
+  <a href="tel:+919876543210" style={{ color: '#000', textDecoration: 'none' }}>Start Today</a>
+</button>
+          <button className="btn-outline">
+            <a href="#plans" style={{  textDecoration: 'none' }}>View Plans</a>
+          </button>
         </div>
       </section>
 
+
+{/* ABOUT SECTION */}
+<section id="about" className="section" style={{ background: "#0a0a0a" }}>
+  <div className="section-tag">About Ironforge</div>
+  <h2 className="section-title">MORE THAN<br />A GYM</h2>
+  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem", marginTop: "3rem" }}>
+    <div>
+      <p className="body-font" style={{ color: "#aaa", lineHeight: "1.8", fontSize: "1.1rem" }}>
+        Founded in 2018, Ironforge Gym has grown into Ludhiana's premier fitness destination. 
+        We're not just a gym - we're a community of warriors committed to pushing beyond limits.
+      </p>
+      <div style={{ marginTop: "2rem" }}>
+        {[
+          "🏆 50+ Certified Trainers",
+          "💪 20,000+ sq ft State-of-art Facility",
+          "🎯 Personalized Training Programs",
+          "🥗 In-house Nutrition Counseling"
+        ].map((item) => (
+          <div key={item} className="body-font" style={{ color: "#C8F542", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div>
+      <div style={{ background: "#111", padding: "2rem", borderRadius: "4px" }}>
+        <div style={{ fontSize: "3rem", color: "#C8F542", marginBottom: "1rem" }}>⚡</div>
+        <h3 style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>Our Mission</h3>
+        <p className="body-font" style={{ color: "#888", lineHeight: "1.8" }}>
+          To forge stronger versions of ourselves - physically, mentally, and spiritually. 
+          Every member who walks through our doors becomes family.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+{/* CLASSES SECTION */}
+<section id="classes" className="section" style={{ paddingTop: 0 }}>
+  <div className="section-tag">Our Classes</div>
+  <h2 className="section-title">FIND YOUR<br />FIGHT</h2>
+  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2rem", marginTop: "3rem" }}>
+    {[
+      { 
+        icon: "🧘", 
+        title: "YOGA", 
+        desc: "Find inner peace and flexibility. Perfect for recovery and mental clarity.",
+        schedule: "Mon/Wed/Fri - 7AM & 6PM",
+        duration: "60 min"
+      },
+      { 
+        icon: "🥋", 
+        title: "JUDO", 
+        desc: "Learn self-defense, discipline, and technique from black belt instructors.",
+        schedule: "Tue/Thu/Sat - 5PM & 7PM",
+        duration: "90 min"
+      },
+      { 
+        icon: "💪", 
+        title: "STRENGTH TRAINING", 
+        desc: "Build muscle and increase power with progressive overload programs.",
+        schedule: "Mon-Sat - 8AM to 9PM",
+        duration: "Flexible"
+      },
+      { 
+        icon: "🔥", 
+        title: "HIIT", 
+        desc: "High-intensity intervals for maximum calorie burn in minimum time.",
+        schedule: "Mon/Wed/Fri - 8AM & 6PM",
+        duration: "45 min"
+      },
+      { 
+        icon: "🥊", 
+        title: "BOXING", 
+        desc: "Release stress while building endurance and coordination.",
+        schedule: "Tue/Thu/Sat - 6PM & 8PM",
+        duration: "60 min"
+      },
+      { 
+        icon: "🏋️", 
+        title: "CROSSFIT", 
+        desc: "Functional fitness at its best. Challenge your limits daily.",
+        schedule: "Mon-Sat - 7AM, 12PM, 7PM",
+        duration: "60 min"
+      },
+    ].map((classItem) => (
+      <div key={classItem.title} style={{ background: "#111", padding: "2rem", transition: "transform 0.3s", cursor: "pointer" }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-10px)"}
+        onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
+        <div style={{ fontSize: "3rem", color: "#C8F542", marginBottom: "1rem" }}>{classItem.icon}</div>
+        <h3 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>{classItem.title}</h3>
+        <p className="body-font" style={{ color: "#888", marginBottom: "1rem", lineHeight: "1.6" }}>{classItem.desc}</p>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "1rem", marginTop: "1rem" }}>
+          <p className="body-font" style={{ color: "#C8F542", fontSize: "0.8rem", marginBottom: "0.5rem" }}>⏰ {classItem.schedule}</p>
+          <p className="body-font" style={{ color: "#666", fontSize: "0.75rem" }}>⌛ {classItem.duration}</p>
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
       {/* STATS */}
       <div className="stats-bar">
         {stats.map((s) => (
@@ -243,44 +301,18 @@ export default function Home() {
       </div>
 
       {/* PLANS */}
-      <section className="section">
+      <section id="plans" className="section">
         <div className="section-tag">Membership Plans</div>
         <h2 className="section-title">PICK YOUR<br />BATTLE PLAN</h2>
-
-        {/* <div className="plans-grid">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`plan-card${plan.highlight ? " highlighted" : ""}${hovered === plan.id ? " hovered-card" : ""}`}
-              onMouseEnter={() => setHovered(plan.id)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              {plan.tag
-                ? <div className="plan-tag">{plan.tag}</div>
-                : <div className="plan-tag-spacer" />
-              }
-              <div className="plan-duration">{plan.duration}</div>
-              <div className="plan-name">{plan.name.toUpperCase()}</div>
-              <div className="plan-price-block">
-                <div className="plan-price">₹{plan.price.toLocaleString("en-IN")}</div>
-                <div className="plan-period">one-time payment</div>
-              </div>
-              <div className="plan-divider" />
-              <ul className="plan-features">
-                {plan.features.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-              <button className="plan-cta">Get Started</button>
-            </div>
-          ))}
-        </div> */}
 
         <PlansDisplay/>
       </section>
 
+
+      <section id="trainer"><TrainersDisplay/></section>
+
       {/* FEATURES */}
-      <section className="section" style={{ paddingTop: 0 }}>
+      <section className="section" id="features" style={{ paddingTop: 0 }}>
         <div className="section-tag">Why Ironforge</div>
         <h2 className="section-title">BUILT FOR<br />WINNERS</h2>
         <div className="features-grid">
@@ -297,6 +329,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+
 
       {/* CTA */}
       <section className="cta-section">

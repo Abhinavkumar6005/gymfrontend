@@ -5,6 +5,8 @@ import DashboardHome from '../components/admin/DashboardHome';
 import Members from '../components/admin/Members';
 import Plans from '../components/admin/Plans';
 import Payments from '../components/admin/Payments';
+import Trainers from '../components/admin/Trainers';
+import PaymentModal from '../components/admin/Payments';
 
 export type ActivePage = 'dashboard' | 'members' | 'plans' | 'payments';
 
@@ -16,7 +18,8 @@ export default function AdminDashboard() {
       case 'dashboard': return <DashboardHome />;
       case 'members': return <Members />;
       case 'plans': return <Plans />;
-      case 'payments': return <Payments />;
+      case 'payments': return <PaymentModal/>;
+      case 'trainers': return <Trainers />;
     }
   };
 

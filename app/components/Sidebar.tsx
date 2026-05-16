@@ -2,13 +2,14 @@
 import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
 import { logout } from '@/store/Slices/authSlice';
-import { ActivePage } from '@/app/admin/dashboard/page';
+import { ActivePage } from '../dashboard/page';
 
 const navItems: { id: ActivePage; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: '⊞' },
   { id: 'members',   label: 'Members',   icon: '◎' },
   { id: 'plans',     label: 'Plans',     icon: '◈' },
   { id: 'payments',  label: 'Payments',  icon: '◇' },
+  { id: 'trainers',  label: 'Trainers',  icon: '△' },
 ];
 
 interface Props {
