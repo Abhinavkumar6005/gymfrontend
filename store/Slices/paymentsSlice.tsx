@@ -312,7 +312,7 @@ const paymentsSlice = createSlice({
           state.payments[index] = {
             ...state.payments[index],
             status: 'deleted',
-            deletedReason: action.payload.deletedReason ,
+            // deletedReason: action.payload.deletedReason ,
             // deletedAt: action.payload.payment.deletedAt,
           };
         }
