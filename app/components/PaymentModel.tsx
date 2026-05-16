@@ -54,7 +54,7 @@ export default function PaymentModal({ member, onClose }: PaymentModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [deleteReason, setDeleteReason] = useState<string>('');
+  const [deleteReason, setDeleteReason] = useState<any>('');
 
   const isBusy = isCreatingOrder || isVerifying || isProcessingManual || isDeleting;
 
