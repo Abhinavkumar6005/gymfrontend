@@ -8,14 +8,14 @@ import Payments from '../components/admin/Payments';
 import Trainers from '../components/admin/Trainers';
 import PaymentModal from '../components/admin/Payments';
 
-export type ActivePage = 'dashboard' | 'members' | 'plans' | 'payments';
+export type ActivePage = 'dashboard' | 'members' | 'plans' | 'payments' | 'trainers';
 
 export default function AdminDashboard() {
   const [activePage, setActivePage] = useState<ActivePage>('dashboard');
 
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardHome />;
+case 'dashboard': return <DashboardHome setActivePage={setActivePage} />;
       case 'members': return <Members />;
       case 'plans': return <Plans />;
       case 'payments': return <PaymentModal/>;

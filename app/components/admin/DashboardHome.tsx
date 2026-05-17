@@ -6,8 +6,13 @@ import { AppDispatch, RootState } from '@/store/store';
 import { fetchMembers, fetchExpiringMembers } from '@/store/Slices/membersSlice';
 import { fetchTrainers } from '@/store/Slices/trainerSlice';
 import { fetchMemberPayments } from '@/store/Slices/paymentsSlice';
+import { ActivePage } from '../../dashboard/page'; // adjust path as needed
 
-export default function Dashboard() {
+interface DashboardProps {
+  setActivePage: (page: ActivePage) => void;
+}
+
+export default function Dashboard({ setActivePage }: DashboardProps) {
   const dispatch = useDispatch<AppDispatch>();
   
   const { members, expiringMembers, isLoading, isLoadingExpiring } = useSelector((state: RootState) => state.members);
@@ -355,7 +360,17 @@ export default function Dashboard() {
 
         {/* Recent Payments - from fetchMemberPayments API */}
         <div>
-          <div className="section-title">💰 RECENT PAYMENTS</div>
+          {/* RECENT PAYMENTS */}
+<div 
+  className="section-title" 
+  onClick={() => setActivePage('payments')}
+  style={{ cursor: 'pointer' }}
+>
+  💰 RECENT PAYMENTS
+  <span style={{ fontSize: '0.75rem', color: '#555', marginLeft: '0.75rem', fontFamily: 'DM Sans, sans-serif', letterSpacing: '1px' }}>
+    VIEW ALL →
+  </span>
+</div>
           {paymentsLoading ? (
             <div style={{ 
               background: '#111', 
@@ -384,7 +399,7 @@ export default function Dashboard() {
                 <div>Method</div>
                 <div>Date</div>
               </div>
-              {recentPayments.map((payment) => (
+              {recentPayments.slice(0,5).map((payment) => (
                 <div key={payment._id} className="table-row">
                   <div style={{ color: '#fff' }}>{getMemberName(payment)}</div>
                   <div style={{ color: '#C8F542', fontWeight: 'bold' }}>
@@ -405,7 +420,17 @@ export default function Dashboard() {
 
       {/* All Members List */}
       <div style={{ marginTop: '2rem' }}>
-        <div className="section-title">📋 ALL MEMBERS</div>
+        {/* ALL MEMBERS — was just a div, now clickable */}
+<div 
+  className="section-title" 
+  onClick={() => setActivePage('members')}
+  style={{ cursor: 'pointer' }}
+>
+  📋 ALL MEMBERS
+  <span style={{ fontSize: '0.75rem', color: '#555', marginLeft: '0.75rem', fontFamily: 'DM Sans, sans-serif', letterSpacing: '1px' }}>
+    VIEW ALL →
+  </span>
+</div>
         {isLoading ? (
           <div style={{ 
             background: '#111', 
@@ -424,7 +449,7 @@ export default function Dashboard() {
               <div>Status</div>
               <div>Membership End</div>
             </div>
-            {Array.isArray(members) && members.map((member) => (
+            {Array.isArray(members) && members.slice(0,5).map((member) => (
               <div key={member._id} className="table-row">
                 <div style={{ color: '#fff' }}>{member.name || member.fullName}</div>
                 <div style={{ color: '#888' }}>{member.phone || '—'}</div>
@@ -446,7 +471,17 @@ export default function Dashboard() {
 
       {/* Trainers Section */}
       <div style={{ marginTop: '2rem' }}>
-        <div className="section-title">💪 TRAINERS</div>
+        {/* TRAINERS */}
+<div 
+  className="section-title" 
+  onClick={() => setActivePage('trainers')}
+  style={{ cursor: 'pointer' }}
+>
+  💪 TRAINERS
+  <span style={{ fontSize: '0.75rem', color: '#555', marginLeft: '0.75rem', fontFamily: 'DM Sans, sans-serif', letterSpacing: '1px' }}>
+    VIEW ALL →
+  </span>
+</div>
         {trainersLoading ? (
           <div style={{ 
             background: '#111', 
