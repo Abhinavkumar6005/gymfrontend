@@ -30,14 +30,14 @@ export default function Payments() {
   // ✅ Fetch all members on mount — payments load when a member is selected
   useEffect(() => {
     dispatch(fetchMembers());
-  }, [dispatch]);
+  }, [dispatch , payingMember]);
 
   // ✅ When a member is selected, fetch their payments
   useEffect(() => {
     if (selectedMemberId) {
       dispatch(fetchMemberPayments(selectedMemberId));
     }
-  }, [selectedMemberId, dispatch]);
+  }, [selectedMemberId, dispatch , payingMember]);
 
   const isLoading = isMembersLoading;
 
