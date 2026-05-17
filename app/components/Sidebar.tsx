@@ -28,10 +28,18 @@ export default function Sidebar({ activePage, setActivePage }: Props) {
 
   return (
     <aside style={{
-      width: '240px', minHeight: '100vh', background: '#111',
-      borderRight: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex', flexDirection: 'column', padding: '0',
-      position: 'sticky', top: 0,
+     width: '240px',
+  height: '100vh',           // ← full viewport height
+  background: '#111',
+  borderRight: '1px solid rgba(255,255,255,0.06)',
+  display: 'flex',
+  flexDirection: 'column',
+  padding: '0',
+  position: 'fixed',         // ← fixed, not sticky
+  top: 0,
+  left: 0,                   // ← anchor to left edge
+  overflow: 'hidden',        // ← no scrolling inside sidebar
+  zIndex: 100,    
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');

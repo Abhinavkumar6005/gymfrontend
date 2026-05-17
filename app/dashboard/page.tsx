@@ -26,7 +26,7 @@ export default function AdminDashboard() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0a', color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>
       <Sidebar activePage={activePage} setActivePage={setActivePage} />
-      <main style={{ flex: 1, padding: '2.5rem', overflowY: 'auto' }}>
+      <main style={{ flex: 1, padding: '2.5rem', overflowY: 'auto', marginLeft: '240px', }}>
         {renderPage()}
       </main>
     </div>
