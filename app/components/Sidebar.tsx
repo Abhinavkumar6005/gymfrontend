@@ -23,7 +23,7 @@ export default function Sidebar({ activePage, setActivePage }: Props) {
 
   const handleLogout = () => {
     dispatch(logout());
-    router.push('/admin/login');
+    router.push('/');
   };
 
   return (
