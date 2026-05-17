@@ -143,6 +143,7 @@ export const adminLogin = createAsyncThunk(
 // Logout
 export const logout = createAsyncThunk('auth/logout', async () => {
   clearAuthData();
+  
   return null;
 });
 
