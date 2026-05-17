@@ -3,7 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/store/store';
-import { fetchMembers, createMember, updateMember, deleteMember, clearError, clearSuccessMessage } from '@/store/Slices/membersSlice';
+import {
+  fetchMembers,
+  createMember,
+  updateMember,
+  deleteMember,
+  clearError,
+  clearSuccessMessage,
+} from '@/store/Slices/membersSlice';
 import { Member } from '@/store/Slices/membersSlice';
 import { fetchPlans } from '@/store/Slices/PlansSlice';
 
@@ -16,23 +23,23 @@ const emptyForm = {
 
 export default function Members() {
   const dispatch = useDispatch<AppDispatch>();
-  const { members, isLoading, isCreating, isUpdating, isDeleting, error, successMessage } = useSelector(
-    (state: RootState) => state.members
-  );
+  const {
+    members, isLoading, isCreating, isUpdating, isDeleting, error, successMessage,
+  } = useSelector((state: RootState) => state.members);
   const { plans } = useSelector((state: RootState) => state.plans);
-
-  useEffect(() => {
-  dispatch(fetchMembers());
-  dispatch(fetchPlans());
-}, [dispatch]);
 
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  useEffect(() => { dispatch(fetchMembers()); }, [dispatch]);
+  // ✅ FIX: Single useEffect — was dispatching fetchMembers() TWICE before
+  useEffect(() => {
+    dispatch(fetchMembers());
+    dispatch(fetchPlans());
+  }, [dispatch]);
 
   useEffect(() => {
     if (successMessage) {
@@ -44,18 +51,22 @@ export default function Members() {
   const openCreate = () => {
     setEditingMember(null);
     setForm(emptyForm);
+    setSubmitError(null);
     setShowForm(true);
   };
 
   const openEdit = (member: Member) => {
     setEditingMember(member);
+    setSubmitError(null);
     setForm({
       fullName: member.fullName || '',
       email: member.email || '',
       phone: member.phone || '',
       address: member.address || '',
       gender: member.gender || 'male',
-      membershipPlan: typeof member.membershipPlan === 'object' ? member.membershipPlan._id : member.membershipPlan || '',
+      membershipPlan: typeof member.membershipPlan === 'object'
+        ? member.membershipPlan._id
+        : member.membershipPlan || '',
       membershipStart: member.membershipStart?.slice(0, 10) || '',
       membershipEnd: member.membershipEnd?.slice(0, 10) || '',
       amountPaid: member.amountPaid || 0,
@@ -71,18 +82,29 @@ export default function Members() {
     setShowForm(false);
     setEditingMember(null);
     setForm(emptyForm);
+    setSubmitError(null);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
+
+    let result;
     if (editingMember) {
-      dispatch(updateMember({ id: editingMember._id, memberData: form as any }));
+      result = await dispatch(updateMember({ id: editingMember._id, memberData: form as any }));
     } else {
-      dispatch(createMember(form as any));
+      result = await dispatch(createMember(form as any));
+    }
+
+    // ✅ Show error inside modal if thunk was rejected
+    if (result.meta.requestStatus === 'rejected') {
+      setSubmitError((result as any).payload || 'Something went wrong. Please try again.');
     }
   };
 
@@ -91,11 +113,14 @@ export default function Members() {
     setDeleteConfirm(null);
   };
 
-  const filtered = members.filter(m =>
-    m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    m.email?.toLowerCase().includes(search.toLowerCase()) ||
-    m.phone?.includes(search)
-  );
+  // ✅ FIX: Guard filtered with isLoading — previously members rendered during loading
+  const filtered = !isLoading
+    ? members.filter(m =>
+        m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+        m.email?.toLowerCase().includes(search.toLowerCase()) ||
+        m.phone?.includes(search)
+      )
+    : [];
 
   const statusColor = (status: string) => {
     if (status === 'active') return '#C8F542';
@@ -110,100 +135,243 @@ export default function Members() {
     <div>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
-        .members-input { width:100%; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:0.75rem 1rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:border-color 0.2s; border-radius:2px; }
-        .members-input:focus { border-color:#C8F542; }
-        .members-input::placeholder { color:#444; }
-        .members-input option { background:#111; }
-        .form-label { font-family:'DM Sans',sans-serif; font-size:0.7rem; letter-spacing:2px; text-transform:uppercase; color:#555; display:block; margin-bottom:0.4rem; }
-        .btn-primary { background:#C8F542; color:#000; border:none; padding:0.75rem 1.5rem; font-family:'DM Sans',sans-serif; font-weight:500; font-size:0.8rem; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:opacity 0.2s; }
-        .btn-primary:hover:not(:disabled) { opacity:0.85; }
-        .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
-        .btn-ghost { background:transparent; color:#666; border:1px solid rgba(255,255,255,0.1); padding:0.75rem 1.5rem; font-family:'DM Sans',sans-serif; font-size:0.8rem; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
-        .btn-ghost:hover { border-color:#fff; color:#fff; }
-        .btn-edit { background:transparent; color:#C8F542; border:1px solid rgba(200,245,66,0.3); padding:0.4rem 0.85rem; font-family:'DM Sans',sans-serif; font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; margin-right:0.5rem; }
-        .btn-edit:hover { background:rgba(200,245,66,0.08); }
-        .btn-danger { background:transparent; color:#ff6b6b; border:1px solid rgba(255,107,107,0.3); padding:0.4rem 0.85rem; font-family:'DM Sans',sans-serif; font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
-        .btn-danger:hover { background:rgba(255,107,107,0.1); }
-        .member-row { display:grid; grid-template-columns:2fr 2fr 1.5fr 1fr 1fr 1.5fr; gap:1rem; align-items:center; padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.04); font-family:'DM Sans',sans-serif; font-size:0.85rem; transition:background 0.2s; }
-        .member-row:hover { background:rgba(255,255,255,0.02); }
-        .status-badge { display:inline-block; padding:0.25rem 0.6rem; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; font-weight:500; border-radius:2px; }
-        .toast { position:fixed; bottom:2rem; right:2rem; z-index:1000; background:#C8F542; color:#000; padding:1rem 1.5rem; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; letter-spacing:1px; }
-        .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; display:flex; align-items:center; justify-content:center; padding:2rem; }
-        .form-card { background:#111; border:1px solid rgba(255,255,255,0.08); width:100%; max-width:700px; max-height:90vh; overflow-y:auto; padding:2.5rem; }
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
-        .form-grid .full { grid-column:1/-1; }
-        .confirm-box { background:#1a0a0a; border:1px solid rgba(255,107,107,0.2); padding:1rem; margin-top:0.5rem; font-family:'DM Sans',sans-serif; }
+
+        .members-input {
+          width: 100%; background: #0a0a0a; border: 1px solid rgba(255,255,255,0.1);
+          color: #fff; padding: 0.75rem 1rem; font-family: 'DM Sans', sans-serif;
+          font-size: 0.9rem; outline: none; transition: border-color 0.2s; border-radius: 2px;
+        }
+        .members-input:focus { border-color: #C8F542; }
+        .members-input::placeholder { color: #444; }
+        .members-input option { background: #111; }
+
+        .form-label {
+          font-family: 'DM Sans', sans-serif; font-size: 0.7rem; letter-spacing: 2px;
+          text-transform: uppercase; color: #555; display: block; margin-bottom: 0.4rem;
+        }
+
+        .btn-primary {
+          background: #C8F542; color: #000; border: none; padding: 0.75rem 1.5rem;
+          font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 0.8rem;
+          letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-primary:hover:not(:disabled) { opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-ghost {
+          background: transparent; color: #666; border: 1px solid rgba(255,255,255,0.1);
+          padding: 0.75rem 1.5rem; font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+          letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-ghost:hover { border-color: #fff; color: #fff; }
+
+        .btn-edit {
+          background: transparent; color: #C8F542; border: 1px solid rgba(200,245,66,0.3);
+          padding: 0.4rem 0.85rem; font-family: 'DM Sans', sans-serif; font-size: 0.75rem;
+          letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+          transition: all 0.2s; margin-right: 0.5rem;
+        }
+        .btn-edit:hover { background: rgba(200,245,66,0.08); }
+
+        .btn-danger {
+          background: transparent; color: #ff6b6b; border: 1px solid rgba(255,107,107,0.3);
+          padding: 0.4rem 0.85rem; font-family: 'DM Sans', sans-serif; font-size: 0.75rem;
+          letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-danger:hover { background: rgba(255,107,107,0.1); }
+
+        .member-row {
+          display: grid;
+          grid-template-columns: 2fr 2fr 1.5fr 1fr 1fr 1.5fr;
+          gap: 1rem; align-items: center; padding: 1rem 1.25rem;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          font-family: 'DM Sans', sans-serif; font-size: 0.85rem; transition: background 0.2s;
+        }
+        .member-row:hover { background: rgba(255,255,255,0.02); }
+
+        .status-badge {
+          display: inline-block; padding: 0.25rem 0.6rem; font-size: 0.7rem;
+          letter-spacing: 1px; text-transform: uppercase; font-weight: 500; border-radius: 2px;
+        }
+
+        /* ── Skeleton ── */
+        .skeleton-line {
+          background: rgba(255,255,255,0.06);
+          border-radius: 2px;
+          animation: skeletonPulse 1.5s ease-in-out infinite;
+        }
+        .skeleton-circle {
+          background: rgba(255,255,255,0.06);
+          border-radius: 50%;
+          animation: skeletonPulse 1.5s ease-in-out infinite;
+        }
+        @keyframes skeletonPulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 0.9; }
+        }
+
+        .toast {
+          position: fixed; bottom: 2rem; right: 2rem; z-index: 1000;
+          background: #C8F542; color: #000; padding: 1rem 1.5rem;
+          font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+          font-weight: 500; letter-spacing: 1px;
+        }
+
+        .overlay {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+          z-index: 100; display: flex; align-items: center;
+          justify-content: center; padding: 2rem;
+        }
+
+        .form-card {
+          background: #111; border: 1px solid rgba(255,255,255,0.08);
+          width: 100%; max-width: 700px; max-height: 90vh;
+          overflow-y: auto; padding: 2.5rem;
+        }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+        .form-grid .full { grid-column: 1 / -1; }
+
+        .confirm-box {
+          background: #1a0a0a; border: 1px solid rgba(255,107,107,0.2);
+          padding: 1rem; margin-top: 0.5rem; font-family: 'DM Sans', sans-serif;
+        }
+
+        .submit-error {
+          background: rgba(255,107,107,0.08);
+          border: 1px solid rgba(255,107,107,0.3);
+          color: #ff6b6b;
+          padding: 0.85rem 1rem;
+          margin-top: 1.5rem;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 0.85rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-radius: 2px;
+        }
       `}</style>
 
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'2rem' }}>
+      {/* ── Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2rem' }}>
         <div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'2.5rem', letterSpacing:'2px' }}>MEMBERS</div>
-          <div style={{ color:'#555', fontSize:'0.85rem', marginTop:'4px', fontFamily:'DM Sans,sans-serif' }}>{members.length} total members</div>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.5rem', letterSpacing: '2px' }}>
+            MEMBERS
+          </div>
+          <div style={{ color: '#555', fontSize: '0.85rem', marginTop: '4px', fontFamily: 'DM Sans, sans-serif' }}>
+            {isLoading ? 'Loading...' : `${members.length} total members`}
+          </div>
         </div>
         <button className="btn-primary" onClick={openCreate}>+ Add Member</button>
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom:'1.5rem' }}>
-        <input className="members-input" placeholder="Search by name, email or phone..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth:'400px' }} />
+      {/* ── Search ── */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <input
+          className="members-input"
+          placeholder="Search by name, email or phone..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ maxWidth: '400px' }}
+        />
       </div>
 
-      {/* Error */}
+      {/* ── Global Error Banner ── */}
       {error && (
-        <div style={{ background:'rgba(255,107,107,0.08)', border:'1px solid rgba(255,107,107,0.2)', color:'#ff6b6b', padding:'0.75rem 1rem', marginBottom:'1rem', fontFamily:'DM Sans,sans-serif', fontSize:'0.85rem' }}>
+        <div style={{
+          background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)',
+          color: '#ff6b6b', padding: '0.75rem 1rem', marginBottom: '1rem',
+          fontFamily: 'DM Sans, sans-serif', fontSize: '0.85rem',
+        }}>
           {error}
-          <span style={{ float:'right', cursor:'pointer' }} onClick={() => dispatch(clearError())}>✕</span>
+          <span style={{ float: 'right', cursor: 'pointer' }} onClick={() => dispatch(clearError())}>✕</span>
         </div>
       )}
 
-      {/* Table */}
-      <div style={{ border:'1px solid rgba(255,255,255,0.06)', background:'#111' }}>
-        <div className="member-row" style={{ background:'#0a0a0a', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+      {/* ── Table ── */}
+      <div style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#111' }}>
+
+        {/* Header Row */}
+        <div className="member-row" style={{ background: '#0a0a0a', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
           {['Name', 'Email', 'Phone', 'Status', 'Payment', 'Actions'].map(h => (
-            <div key={h} style={{ fontSize:'0.7rem', letterSpacing:'2px', textTransform:'uppercase', color:'#444', fontFamily:'DM Sans,sans-serif' }}>{h}</div>
+            <div key={h} style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: '#444', fontFamily: 'DM Sans, sans-serif' }}>
+              {h}
+            </div>
           ))}
         </div>
 
-        {isLoading && <div style={{ padding:'3rem', textAlign:'center', color:'#444', fontFamily:'DM Sans,sans-serif' }}>Loading members...</div>}
+        {/* ✅ FIX: Skeleton rows shown while loading — previously just showed text */}
+        {isLoading && [...Array(5)].map((_, i) => (
+          <div key={i} className="member-row" style={{ opacity: 1 - i * 0.15 }}>
+            {/* Name col */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="skeleton-line" style={{ height: 13, width: '70%' }} />
+              <div className="skeleton-line" style={{ height: 10, width: '45%' }} />
+            </div>
+            {/* Email */}
+            <div className="skeleton-line" style={{ height: 13, width: '80%' }} />
+            {/* Phone */}
+            <div className="skeleton-line" style={{ height: 13, width: '60%' }} />
+            {/* Status badge */}
+            <div className="skeleton-line" style={{ height: 24, width: 60, borderRadius: 2 }} />
+            {/* Payment badge */}
+            <div className="skeleton-line" style={{ height: 24, width: 50, borderRadius: 2 }} />
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="skeleton-line" style={{ height: 30, width: 50, borderRadius: 2 }} />
+              <div className="skeleton-line" style={{ height: 30, width: 60, borderRadius: 2 }} />
+            </div>
+          </div>
+        ))}
 
+        {/* ✅ FIX: Only render member rows when NOT loading */}
         {!isLoading && filtered.length === 0 && (
-          <div style={{ padding:'3rem', textAlign:'center', color:'#444', fontFamily:'DM Sans,sans-serif' }}>
+          <div style={{ padding: '3rem', textAlign: 'center', color: '#444', fontFamily: 'DM Sans, sans-serif' }}>
             {search ? 'No members match your search.' : 'No members yet. Add your first member.'}
           </div>
         )}
 
-        {filtered.map((member) => (
+        {!isLoading && filtered.map((member) => (
           <div key={member._id} className="member-row">
             <div>
-              <div style={{ color:'#fff', fontWeight:500 }}>{member.fullName}</div>
-              <div style={{ fontSize:'0.75rem', color:'#555', marginTop:'2px' }}>
+              <div style={{ color: '#fff', fontWeight: 500 }}>{member.fullName}</div>
+              <div style={{ fontSize: '0.75rem', color: '#555', marginTop: '2px' }}>
                 {typeof member.membershipPlan === 'object' ? member.membershipPlan.name : '—'}
               </div>
             </div>
-            <div style={{ color:'#888' }}>{member.email}</div>
-            <div style={{ color:'#888' }}>{member.phone}</div>
+            <div style={{ color: '#888' }}>{member.email}</div>
+            <div style={{ color: '#888' }}>{member.phone}</div>
             <div>
-              <span className="status-badge" style={{ background:`${statusColor(member.status)}18`, color:statusColor(member.status) }}>
+              <span className="status-badge" style={{
+                background: `${statusColor(member.status)}18`,
+                color: statusColor(member.status),
+              }}>
                 {member.status}
               </span>
             </div>
             <div>
-              <span className="status-badge" style={{ background: member.paymentStatus === 'paid' ? 'rgba(200,245,66,0.1)' : 'rgba(255,107,107,0.1)', color: member.paymentStatus === 'paid' ? '#C8F542' : '#ff6b6b' }}>
+              <span className="status-badge" style={{
+                background: member.paymentStatus === 'paid' ? 'rgba(200,245,66,0.1)' : 'rgba(255,107,107,0.1)',
+                color: member.paymentStatus === 'paid' ? '#C8F542' : '#ff6b6b',
+              }}>
                 {member.paymentStatus}
               </span>
             </div>
             <div>
               {deleteConfirm === member._id ? (
                 <div className="confirm-box">
-                  <div style={{ fontSize:'0.8rem', color:'#ff6b6b', marginBottom:'0.5rem' }}>Delete?</div>
-                  <div style={{ display:'flex', gap:'0.5rem' }}>
-                    <button className="btn-danger" onClick={() => handleDelete(member._id)} disabled={isDeleting}>{isDeleting ? '...' : 'Yes'}</button>
-                    <button className="btn-ghost" style={{ padding:'0.4rem 0.85rem', fontSize:'0.75rem' }} onClick={() => setDeleteConfirm(null)}>No</button>
+                  <div style={{ fontSize: '0.8rem', color: '#ff6b6b', marginBottom: '0.5rem' }}>Delete?</div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn-danger" onClick={() => handleDelete(member._id)} disabled={isDeleting}>
+                      {isDeleting ? '...' : 'Yes'}
+                    </button>
+                    <button className="btn-ghost" style={{ padding: '0.4rem 0.85rem', fontSize: '0.75rem' }} onClick={() => setDeleteConfirm(null)}>
+                      No
+                    </button>
                   </div>
                 </div>
               ) : (
-                <div style={{ display:'flex' }}>
+                <div style={{ display: 'flex' }}>
                   <button className="btn-edit" onClick={() => openEdit(member)}>Edit</button>
                   <button className="btn-danger" onClick={() => setDeleteConfirm(member._id)}>Delete</button>
                 </div>
@@ -213,20 +381,20 @@ export default function Members() {
         ))}
       </div>
 
-      {/* Form Modal */}
+      {/* ── Form Modal ── */}
       {showForm && (
         <div className="overlay" onClick={(e) => e.target === e.currentTarget && closeForm()}>
           <div className="form-card">
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'2rem', letterSpacing:'2px' }}>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '2px' }}>
                   {editingMember ? 'EDIT MEMBER' : 'ADD MEMBER'}
                 </div>
-                <div style={{ color:'#555', fontSize:'0.8rem', fontFamily:'DM Sans,sans-serif' }}>
+                <div style={{ color: '#555', fontSize: '0.8rem', fontFamily: 'DM Sans, sans-serif' }}>
                   {editingMember ? 'Update member details' : 'Fill in member details'}
                 </div>
               </div>
-              <button onClick={closeForm} style={{ background:'none', border:'none', color:'#666', cursor:'pointer', fontSize:'1.25rem' }}>✕</button>
+              <button onClick={closeForm} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.25rem' }}>✕</button>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -259,7 +427,9 @@ export default function Members() {
                   <label className="form-label">Membership Plan *</label>
                   <select name="membershipPlan" className="members-input" value={form.membershipPlan} onChange={handleChange} required>
                     <option value="">Select plan</option>
-                    {plans.map(p => <option key={p._id} value={p._id}>{p.name} — ₹{p.price}</option>)}
+                    {plans.map(p => (
+                      <option key={p._id} value={p._id}>{p.name} — ₹{p.price}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -298,7 +468,21 @@ export default function Members() {
                 </div>
               </div>
 
-              <div style={{ display:'flex', gap:'1rem', marginTop:'2rem' }}>
+              {/* ✅ Submit error shown inside modal above buttons */}
+              {submitError && (
+                <div className="submit-error">
+                  <span>⚠ {submitError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSubmitError(null)}
+                    style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1rem', padding: 0 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.25rem' }}>
                 <button type="submit" className="btn-primary" disabled={isBusy}>
                   {isBusy ? 'Saving...' : editingMember ? 'Update Member' : 'Create Member'}
                 </button>
@@ -309,7 +493,7 @@ export default function Members() {
         </div>
       )}
 
-      {successMessage && <div className="toast">{successMessage}</div>}
+      {successMessage && <div className="toast">✓ {successMessage}</div>}
     </div>
   );
 }

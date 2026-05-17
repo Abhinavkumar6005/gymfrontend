@@ -73,6 +73,7 @@ export default function Trainers() {
     error,
     successMessage,
   } = useSelector((state: RootState) => state.trainers);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editingTrainer, setEditingTrainer] = useState<Trainer | null>(null);
@@ -131,18 +132,16 @@ export default function Trainers() {
     setShowForm(true);
   };
 
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingTrainer(null);
-    setForm(emptyForm);
-    setAchievementInput('');
-    setImageFile(null);
-    setImagePreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
+const closeForm = () => {
+  setShowForm(false);
+  setEditingTrainer(null);
+  setForm(emptyForm);
+  setAchievementInput('');
+  setImageFile(null);
+  setImagePreview(null);
+  setSubmitError(null); // ← add this
+  if (fileInputRef.current) fileInputRef.current.value = '';
+};
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -208,31 +207,43 @@ export default function Trainers() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const formData = new FormData();
-    formData.append('fullName', form.fullName);
-    formData.append('email', form.email);
-    formData.append('phone', form.phone);
-    formData.append('specialization', form.specialization);
-    formData.append('certification', form.certification);
-    formData.append('experience', form.experience.toString());
-    formData.append('bio', form.bio);
-    formData.append('achievements', JSON.stringify(form.achievements));
-    formData.append('availableDays', JSON.stringify(form.availableDays));
-    formData.append('availableTime', JSON.stringify(form.availableTime));
-    
-    if (imageFile) {
-      formData.append('photo', imageFile);
-    }
-    
-    if (editingTrainer) {
-      await dispatch(updateTrainer({ id: editingTrainer._id, trainerData: formData }));
-    } else {
-      await dispatch(createTrainer(formData));
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setSubmitError(null); // clear previous error
+
+  const formData = new FormData();
+  formData.append('fullName', form.fullName);
+  formData.append('email', form.email);
+  formData.append('phone', form.phone);
+  formData.append('specialization', form.specialization);
+  formData.append('certification', form.certification);
+  formData.append('experience', form.experience.toString());
+  formData.append('bio', form.bio);
+  formData.append('achievements', JSON.stringify(form.achievements));
+  formData.append('availableDays', JSON.stringify(form.availableDays));
+  formData.append('availableTime', JSON.stringify(form.availableTime));
+
+  if (form.bio.length > 500) {
+    setSubmitError(`Bio is too long — ${form.bio.length}/500 characters used. Please shorten it.`);
+    return; // stop here, never hits the API
+  }
+  
+  if (imageFile) {
+    formData.append('photo', imageFile);
+  }
+
+  let result;
+  if (editingTrainer) {
+    result = await dispatch(updateTrainer({ id: editingTrainer._id, trainerData: formData }));
+  } else {
+    result = await dispatch(createTrainer(formData));
+  }
+
+  // Show error if thunk was rejected
+  if (result.meta.requestStatus === 'rejected') {
+    setSubmitError((result as any).payload || 'Something went wrong. Please try again.');
+  }
+};
 
   const handleDelete = (id: string) => {
     dispatch(deleteTrainer(id));
@@ -764,12 +775,44 @@ export default function Trainers() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+{/* Error Banner — add this just before the submit button row */}
+{(submitError || error) && (
+  <div style={{
+    background: 'rgba(255,107,107,0.08)',
+    border: '1px solid rgba(255,107,107,0.3)',
+    color: '#ff6b6b',
+    padding: '0.85rem 1rem',
+    marginTop: '1.5rem',
+    fontFamily: 'DM Sans, sans-serif',
+    fontSize: '0.85rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderRadius: '2px',
+  }}>
+    <span>⚠ {submitError || error}</span>
+    <button
+      type="button"
+      onClick={() => { setSubmitError(null); dispatch(clearError()); }}
+      style={{ background: 'none', border: 'none', color: '#ff6b6b', cursor: 'pointer', fontSize: '1rem' }}
+    >
+      ✕
+    </button>
+  </div>
+)}
+
+<div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+  <button type="submit" className="btn-primary" disabled={isBusy}>
+    {isBusy ? 'Saving...' : editingTrainer ? 'Update Trainer' : 'Create Trainer'}
+  </button>
+  <button type="button" className="btn-ghost" onClick={closeForm}>Cancel</button>
+</div>  
+              {/* <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
                 <button type="submit" className="btn-primary" disabled={isBusy}>
                   {isBusy ? 'Saving...' : editingTrainer ? 'Update Trainer' : 'Create Trainer'}
                 </button>
                 <button type="button" className="btn-ghost" onClick={closeForm}>Cancel</button>
-              </div>
+              </div> */}
             </form>
           </div>
         </div>

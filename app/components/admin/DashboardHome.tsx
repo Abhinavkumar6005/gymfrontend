@@ -393,9 +393,9 @@ export default function Dashboard() {
                   <div>
                     <span className="badge badge-success">{payment.paymentMethod}</span>
                   </div>
-                  <div style={{ color: '#888', fontSize: '0.75rem' }}>
-                    {new Date(payment.createdAt).toLocaleDateString('en-IN')}
-                  </div>
+                 <div style={{ color: '#888', fontSize: '0.75rem' }}>
+  {new Date(payment.paymentDate).toLocaleDateString('en-IN')}
+</div>
                 </div>
               ))}
             </div>

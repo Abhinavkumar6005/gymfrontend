@@ -3,155 +3,158 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/store/store';
-import { fetchMembers, createMember, updateMember, deleteMember, clearError, clearSuccessMessage } from '@/store/Slices/membersSlice';
+import {
+  fetchMemberPayments,
+  clearError,
+} from '@/store/Slices/paymentsSlice';
+import { fetchMembers } from '@/store/Slices/membersSlice';
 import { Member } from '@/store/Slices/membersSlice';
-import { fetchPlans } from '@/store/Slices/PlansSlice';
 import PaymentModal from '../PaymentModel';
 
-const emptyForm = {
-  fullName: '', email: '', phone: '', address: '',
-  gender: 'male', membershipPlan: '', membershipStart: '',
-  membershipEnd: '', amountPaid: 0, remainingAmount: 0,
-  status: 'active', paymentStatus: 'paid', isActive: true,
-};
-
-export default function Members() {
+export default function Payments() {
   const dispatch = useDispatch<AppDispatch>();
-  const { members, isLoading, isCreating, isUpdating, isDeleting, error, successMessage } = useSelector(
+
+  const { members, isLoading: isMembersLoading } = useSelector(
     (state: RootState) => state.members
   );
-  const { plans } = useSelector((state: RootState) => state.plans);
-
-  const [showForm, setShowForm] = useState(false);
-  const [editingMember, setEditingMember] = useState<Member | null>(null);
-  const [payingMember, setPayingMember] = useState<Member | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    dispatch(fetchMembers());
-    dispatch(fetchPlans());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (successMessage) {
-      setTimeout(() => dispatch(clearSuccessMessage()), 3000);
-      closeForm();
-    }
-  }, [successMessage, dispatch]);
-
-  const openCreate = () => {
-    setEditingMember(null);
-    setForm(emptyForm);
-    setShowForm(true);
-  };
-
-  const openEdit = (member: Member) => {
-    setEditingMember(member);
-    setForm({
-      fullName: member.fullName || '',
-      email: member.email || '',
-      phone: member.phone || '',
-      address: member.address || '',
-      gender: member.gender || 'male',
-      membershipPlan: typeof member.membershipPlan === 'object' ? member.membershipPlan._id : member.membershipPlan || '',
-      membershipStart: member.membershipStart?.slice(0, 10) || '',
-      membershipEnd: member.membershipEnd?.slice(0, 10) || '',
-      amountPaid: member.amountPaid || 0,
-      remainingAmount: member.remainingAmount || 0,
-      status: member.status || 'active',
-      paymentStatus: member.paymentStatus || 'paid',
-      isActive: member.isActive ?? true,
-    });
-    setShowForm(true);
-  };
-
-  const closeForm = () => {
-    setShowForm(false);
-    setEditingMember(null);
-    setForm(emptyForm);
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (editingMember) {
-      dispatch(updateMember({ id: editingMember._id, memberData: form as any }));
-    } else {
-      dispatch(createMember(form as any));
-    }
-  };
-
-  const handleDelete = (id: string) => {
-    dispatch(deleteMember(id));
-    setDeleteConfirm(null);
-  };
-
-  const filtered = members.filter(m =>
-    m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    m.email?.toLowerCase().includes(search.toLowerCase()) ||
-    m.phone?.includes(search)
+  const { payments, isLoading: isPaymentsLoading, error } = useSelector(
+    (state: RootState) => state.payments
   );
 
-  const statusColor = (status: string) => {
-    if (status === 'active') return '#C8F542';
-    if (status === 'expired') return '#ff6b6b';
-    if (status === 'pending') return '#f0a500';
+  const [search, setSearch]               = useState('');
+  const [statusFilter, setStatusFilter]   = useState('all');
+  const [methodFilter, setMethodFilter]   = useState('all');
+  const [payingMember, setPayingMember]   = useState<Member | null>(null);
+  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+
+  // ✅ Fetch all members on mount — payments load when a member is selected
+  useEffect(() => {
+    dispatch(fetchMembers());
+  }, [dispatch]);
+
+  // ✅ When a member is selected, fetch their payments
+  useEffect(() => {
+    if (selectedMemberId) {
+      dispatch(fetchMemberPayments(selectedMemberId));
+    }
+  }, [selectedMemberId, dispatch]);
+
+  const isLoading = isMembersLoading;
+
+  // ✅ Filter members by search
+  const filteredMembers = !isMembersLoading
+    ? members.filter(m =>
+        m.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+        m.email?.toLowerCase().includes(search.toLowerCase()) ||
+        m.phone?.includes(search)
+      )
+    : [];
+
+  // ✅ Filter payments by status/method
+  // Note: If payment doesn't have a status, treat it as 'completed' (default)
+  const filteredPayments = !isPaymentsLoading
+    ? payments.filter(p => {
+        const paymentStatus = p.status || 'completed'; // Default status if missing
+        const matchStatus = statusFilter === 'all' || paymentStatus === statusFilter;
+        const matchMethod = methodFilter === 'all' || p.paymentMethod === methodFilter;
+        return matchStatus && matchMethod;
+      })
+    : [];
+
+  const selectedMember = members.find(m => m._id === selectedMemberId) || null;
+
+  const totalRevenue = payments
+    .filter(p => (p.status || 'completed') === 'completed')
+    .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+  const methodColor = (method: string) => {
+    if (method === 'cash')       return '#C8F542';
+    if (method === 'online')     return '#4fc3f7';
+    if (method === 'upi')        return '#ba68c8';
+    if (method === 'card')       return '#ffb74d';
+    if (method === 'netbanking') return '#81c784';
     return '#666';
   };
 
-  const isBusy = isCreating || isUpdating;
+  const statusColor = (status: string) => {
+    if (status === 'completed') return '#C8F542';
+    if (status === 'deleted')   return '#ff6b6b';
+    if (status === 'pending')   return '#f0a500';
+    if (status === 'failed')    return '#ff6b6b';
+    return '#C8F542'; // Default to completed color
+  };
+
+  // Helper function to get display date from payment
+  const getPaymentDate = (payment: any) => {
+    // Use paymentDate if available, fallback to createdAt, then current date
+    const dateString = payment.paymentDate || payment.createdAt;
+    return dateString ? new Date(dateString) : new Date();
+  };
 
   return (
     <div>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap');
-        .members-input { width:100%; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:0.75rem 1rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:border-color 0.2s; border-radius:2px; }
-        .members-input:focus { border-color:#C8F542; }
-        .members-input::placeholder { color:#444; }
-        .members-input option { background:#111; }
-        .form-label { font-family:'DM Sans',sans-serif; font-size:0.7rem; letter-spacing:2px; text-transform:uppercase; color:#555; display:block; margin-bottom:0.4rem; }
-        .btn-primary { background:#C8F542; color:#000; border:none; padding:0.75rem 1.5rem; font-family:'DM Sans',sans-serif; font-weight:500; font-size:0.8rem; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:opacity 0.2s; }
-        .btn-primary:hover:not(:disabled) { opacity:0.85; }
-        .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
-        .btn-ghost { background:transparent; color:#666; border:1px solid rgba(255,255,255,0.1); padding:0.75rem 1.5rem; font-family:'DM Sans',sans-serif; font-size:0.8rem; letter-spacing:2px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
-        .btn-ghost:hover { border-color:#fff; color:#fff; }
-        .btn-edit { background:transparent; color:#C8F542; border:1px solid rgba(200,245,66,0.3); padding:0.4rem 0.85rem; font-family:'DM Sans',sans-serif; font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; margin-right:0.5rem; }
-        .btn-edit:hover { background:rgba(200,245,66,0.08); }
-        .btn-pay { background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.2); padding:0.4rem 0.85rem; font-family:'DM Sans',sans-serif; font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; margin-right:0.5rem; }
-        .btn-pay:hover { background:rgba(255,255,255,0.06); border-color:#fff; }
-        .btn-danger { background:transparent; color:#ff6b6b; border:1px solid rgba(255,107,107,0.3); padding:0.4rem 0.85rem; font-family:'DM Sans',sans-serif; font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; cursor:pointer; transition:all 0.2s; }
-        .btn-danger:hover { background:rgba(255,107,107,0.1); }
-        .member-row { display:grid; grid-template-columns:2fr 2fr 1.5fr 1fr 1fr 2fr; gap:1rem; align-items:center; padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.04); font-family:'DM Sans',sans-serif; font-size:0.85rem; transition:background 0.2s; }
-        .member-row:hover { background:rgba(255,255,255,0.02); }
-        .status-badge { display:inline-block; padding:0.25rem 0.6rem; font-size:0.7rem; letter-spacing:1px; text-transform:uppercase; font-weight:500; border-radius:2px; }
-        .toast { position:fixed; bottom:2rem; right:2rem; z-index:1000; background:#C8F542; color:#000; padding:1rem 1.5rem; font-family:'DM Sans',sans-serif; font-size:0.85rem; font-weight:500; letter-spacing:1px; }
-        .overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; display:flex; align-items:center; justify-content:center; padding:2rem; }
-        .form-card { background:#111; border:1px solid rgba(255,255,255,0.08); width:100%; max-width:700px; max-height:90vh; overflow-y:auto; padding:2.5rem; }
-        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
-        .form-grid .full { grid-column:1/-1; }
-        .confirm-box { background:#1a0a0a; border:1px solid rgba(255,107,107,0.2); padding:1rem; margin-top:0.5rem; font-family:'DM Sans',sans-serif; }
+
+        .pay-input { width:100%; background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); color:#fff; padding:0.75rem 1rem; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none; transition:border-color 0.2s; border-radius:2px; }
+        .pay-input:focus { border-color:#C8F542; }
+        .pay-input::placeholder { color:#444; }
+        .pay-input option { background:#111; }
+
+        .member-card { padding:0.85rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.15s; font-family:'DM Sans',sans-serif; }
+        .member-card:hover { background:rgba(255,255,255,0.03); }
+        .member-card.active { background:rgba(200,245,66,0.06); border-left:2px solid #C8F542; }
+
+        .payment-row { display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr 1fr; gap:1rem; align-items:center; padding:0.9rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.04); font-family:'DM Sans',sans-serif; font-size:0.85rem; transition:background 0.2s; }
+        .payment-row:hover { background:rgba(255,255,255,0.02); }
+
+        .badge { display:inline-block; padding:0.2rem 0.6rem; font-size:0.65rem; letter-spacing:1px; text-transform:uppercase; font-weight:500; border-radius:2px; }
+
+        .skeleton-line { background:rgba(255,255,255,0.06); border-radius:2px; animation:skPulse 1.5s ease-in-out infinite; }
+        @keyframes skPulse { 0%,100%{opacity:0.35} 50%{opacity:0.8} }
+
+        .stat-card { background:#111; border:1px solid rgba(255,255,255,0.06); padding:1.25rem 1.5rem; }
+
+        .filter-select { background:#0a0a0a; border:1px solid rgba(255,255,255,0.1); color:#666; padding:0.5rem 0.75rem; font-family:'DM Sans',sans-serif; font-size:0.75rem; letter-spacing:1px; text-transform:uppercase; outline:none; cursor:pointer; border-radius:2px; transition:border-color 0.2s; }
+        .filter-select:focus { border-color:#C8F542; color:#fff; }
+        .filter-select option { background:#111; text-transform:none; }
+
+        .pay-now-btn { background:#C8F542; color:#000; border:none; padding:0.5rem 1rem; font-family:'DM Sans',sans-serif; font-weight:500; font-size:0.75rem; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:opacity 0.2s; border-radius:2px; white-space:nowrap; }
+        .pay-now-btn:hover { opacity:0.85; }
       `}</style>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'2rem' }}>
         <div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'2.5rem', letterSpacing:'2px' }}>MEMBERS</div>
-          <div style={{ color:'#555', fontSize:'0.85rem', marginTop:'4px', fontFamily:'DM Sans,sans-serif' }}>{members.length} total members</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'2.5rem', letterSpacing:'2px' }}>PAYMENTS</div>
+          <div style={{ color:'#555', fontSize:'0.85rem', marginTop:'4px', fontFamily:'DM Sans,sans-serif' }}>
+            {isMembersLoading ? 'Loading...' : `${members.length} members · select one to view payments`}
+          </div>
         </div>
-        <button className="btn-primary" onClick={openCreate}>+ Add Member</button>
+        {/* Stats */}
+        {selectedMemberId && (
+          <div style={{ display:'flex', gap:'1rem' }}>
+            <div className="stat-card" style={{ textAlign:'right' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'1.5rem', color:'#C8F542', letterSpacing:'1px' }}>
+                ₹{totalRevenue.toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize:'0.65rem', color:'#555', letterSpacing:'2px', textTransform:'uppercase', fontFamily:'DM Sans,sans-serif' }}>
+                Total Collected
+              </div>
+            </div>
+            <div className="stat-card" style={{ textAlign:'right' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'1.5rem', color:'#fff', letterSpacing:'1px' }}>
+                {payments.filter(p => (p.status || 'completed') === 'completed').length}
+              </div>
+              <div style={{ fontSize:'0.65rem', color:'#555', letterSpacing:'2px', textTransform:'uppercase', fontFamily:'DM Sans,sans-serif' }}>
+                Transactions
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom:'1.5rem' }}>
-        <input className="members-input" placeholder="Search by name, email or phone..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ maxWidth:'400px' }} />
-      </div>
-
-      {/* Error */}
+      {/* ── Error ── */}
       {error && (
         <div style={{ background:'rgba(255,107,107,0.08)', border:'1px solid rgba(255,107,107,0.2)', color:'#ff6b6b', padding:'0.75rem 1rem', marginBottom:'1rem', fontFamily:'DM Sans,sans-serif', fontSize:'0.85rem' }}>
           {error}
@@ -159,168 +162,217 @@ export default function Members() {
         </div>
       )}
 
-      {/* Table */}
-      <div style={{ border:'1px solid rgba(255,255,255,0.06)', background:'#111' }}>
-        <div className="member-row" style={{ background:'#0a0a0a', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
-          {['Name', 'Email', 'Phone', 'Status', 'Payment', 'Actions'].map(h => (
-            <div key={h} style={{ fontSize:'0.7rem', letterSpacing:'2px', textTransform:'uppercase', color:'#444', fontFamily:'DM Sans,sans-serif' }}>{h}</div>
-          ))}
-        </div>
+      <div style={{ display:'grid', gridTemplateColumns:'300px 1fr', gap:'1.5rem', alignItems:'start' }}>
 
-        {isLoading && <div style={{ padding:'3rem', textAlign:'center', color:'#444', fontFamily:'DM Sans,sans-serif' }}>Loading members...</div>}
-
-        {!isLoading && filtered.length === 0 && (
-          <div style={{ padding:'3rem', textAlign:'center', color:'#444', fontFamily:'DM Sans,sans-serif' }}>
-            {search ? 'No members match your search.' : 'No members yet. Add your first member.'}
+        {/* ── Left: Member List ── */}
+        <div style={{ border:'1px solid rgba(255,255,255,0.06)', background:'#111', position:'sticky', top:'1rem' }}>
+          <div style={{ padding:'1rem', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+            <input
+              className="pay-input"
+              placeholder="Search members..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-        )}
 
-        {filtered.map((member) => (
-          <div key={member._id} className="member-row">
-            <div>
-              <div style={{ color:'#fff', fontWeight:500 }}>{member.fullName}</div>
-              <div style={{ fontSize:'0.75rem', color:'#555', marginTop:'2px' }}>
-                {typeof member.membershipPlan === 'object' ? member.membershipPlan.name : '—'}
+          {/* Skeleton while members load */}
+          {isMembersLoading && [...Array(5)].map((_, i) => (
+            <div key={i} style={{ padding:'0.85rem 1rem', borderBottom:'1px solid rgba(255,255,255,0.04)', opacity: 1 - i * 0.15 }}>
+              <div className="skeleton-line" style={{ height:13, width:'65%', marginBottom:6 }} />
+              <div className="skeleton-line" style={{ height:10, width:'45%' }} />
+            </div>
+          ))}
+
+          {/* ✅ Member list — only when NOT loading */}
+          {!isMembersLoading && filteredMembers.length === 0 && (
+            <div style={{ padding:'2rem', textAlign:'center', color:'#444', fontFamily:'DM Sans,sans-serif', fontSize:'0.85rem' }}>
+              No members found.
+            </div>
+          )}
+
+          {!isMembersLoading && filteredMembers.map(member => (
+            <div
+              key={member._id}
+              className={`member-card${selectedMemberId === member._id ? ' active' : ''}`}
+              onClick={() => setSelectedMemberId(member._id)}
+            >
+              <div style={{ color: selectedMemberId === member._id ? '#C8F542' : '#fff', fontWeight:500, fontSize:'0.875rem' }}>
+                {member.fullName}
               </div>
-            </div>
-            <div style={{ color:'#888' }}>{member.email}</div>
-            <div style={{ color:'#888' }}>{member.phone}</div>
-            <div>
-              <span className="status-badge" style={{ background:`${statusColor(member.status)}18`, color:statusColor(member.status) }}>
-                {member.status}
-              </span>
-            </div>
-            <div>
-              <span className="status-badge" style={{ background: member.paymentStatus === 'paid' ? 'rgba(200,245,66,0.1)' : 'rgba(255,107,107,0.1)', color: member.paymentStatus === 'paid' ? '#C8F542' : '#ff6b6b' }}>
-                {member.paymentStatus}
-              </span>
-            </div>
-            <div>
-              {deleteConfirm === member._id ? (
-                <div className="confirm-box">
-                  <div style={{ fontSize:'0.8rem', color:'#ff6b6b', marginBottom:'0.5rem' }}>Delete?</div>
-                  <div style={{ display:'flex', gap:'0.5rem' }}>
-                    <button className="btn-danger" onClick={() => handleDelete(member._id)} disabled={isDeleting}>{isDeleting ? '...' : 'Yes'}</button>
-                    <button className="btn-ghost" style={{ padding:'0.4rem 0.85rem', fontSize:'0.75rem' }} onClick={() => setDeleteConfirm(null)}>No</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ display:'flex', flexWrap:'wrap', gap:'0.25rem' }}>
-                  <button className="btn-edit" onClick={() => openEdit(member)}>Edit</button>
-                  <button className="btn-pay" onClick={() => setPayingMember(member)}>Pay</button>
-                  <button className="btn-danger" onClick={() => setDeleteConfirm(member._id)}>Delete</button>
+              <div style={{ fontSize:'0.75rem', color:'#555', marginTop:'2px' }}>
+                {member.phone}
+              </div>
+              {member.remainingAmount > 0 && (
+                <div style={{ fontSize:'0.7rem', color:'#ff6b6b', marginTop:'2px' }}>
+                  Due: ₹{member.remainingAmount.toLocaleString('en-IN')}
                 </div>
               )}
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* ── Right: Payment History ── */}
+        <div>
+          {!selectedMemberId ? (
+            <div style={{ border:'1px solid rgba(255,255,255,0.06)', background:'#111', padding:'4rem', textAlign:'center' }}>
+              <div style={{ fontSize:'2rem', marginBottom:'1rem' }}>💳</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'1.5rem', color:'#333', letterSpacing:'2px' }}>
+                SELECT A MEMBER
+              </div>
+              <div style={{ color:'#444', fontSize:'0.85rem', marginTop:'0.5rem', fontFamily:'DM Sans,sans-serif' }}>
+                Click any member on the left to view their payment history
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Selected member header */}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem', padding:'1rem 1.25rem', background:'#111', border:'1px solid rgba(255,255,255,0.06)' }}>
+                <div>
+                  <div style={{ fontFamily:'DM Sans,sans-serif', fontWeight:500, color:'#fff' }}>
+                    {selectedMember?.fullName}
+                  </div>
+                  <div style={{ fontSize:'0.75rem', color:'#555', marginTop:'2px', fontFamily:'DM Sans,sans-serif' }}>
+                    {selectedMember?.email} · Ends {selectedMember?.membershipEnd
+                      ? new Date(selectedMember.membershipEnd).toLocaleDateString('en-IN')
+                      : '—'}
+                  </div>
+                </div>
+                <button
+                  className="pay-now-btn"
+                  onClick={() => selectedMember && setPayingMember(selectedMember)}
+                >
+                  + New Payment
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display:'flex', gap:'0.75rem', marginBottom:'1rem' }}>
+                <select className="filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+                  <option value="all">All Status</option>
+                  <option value="completed">Completed</option>
+                  <option value="pending">Pending</option>
+                  <option value="failed">Failed</option>
+                  <option value="deleted">Deleted</option>
+                </select>
+                <select className="filter-select" value={methodFilter} onChange={e => setMethodFilter(e.target.value)}>
+                  <option value="all">All Methods</option>
+                  <option value="cash">Cash</option>
+                  <option value="online">Online</option>
+                  <option value="upi">UPI</option>
+                  <option value="card">Card</option>
+                  <option value="netbanking">Net Banking</option>
+                </select>
+              </div>
+
+              {/* Payment table */}
+              <div style={{ border:'1px solid rgba(255,255,255,0.06)', background:'#111' }}>
+                {/* Table header */}
+                <div className="payment-row" style={{ background:'#0a0a0a', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+                  {['Date', 'Amount', 'Method', 'Months', 'Status'].map(h => (
+                    <div key={h} style={{ fontSize:'0.65rem', letterSpacing:'2px', textTransform:'uppercase', color:'#444', fontFamily:'DM Sans,sans-serif' }}>{h}</div>
+                  ))}
+                </div>
+
+                {/* ✅ Skeleton while payments load */}
+                {isPaymentsLoading && [...Array(4)].map((_, i) => (
+                  <div key={i} className="payment-row" style={{ opacity: 1 - i * 0.2 }}>
+                    <div className="skeleton-line" style={{ height:13, width:'60%' }} />
+                    <div className="skeleton-line" style={{ height:13, width:'50%' }} />
+                    <div className="skeleton-line" style={{ height:22, width:50, borderRadius:2 }} />
+                    <div className="skeleton-line" style={{ height:13, width:30 }} />
+                    <div className="skeleton-line" style={{ height:22, width:70, borderRadius:2 }} />
+                  </div>
+                ))}
+
+                {/* ✅ Empty state — only after load */}
+                {!isPaymentsLoading && filteredPayments.length === 0 && (
+                  <div style={{ padding:'3rem', textAlign:'center', color:'#444', fontFamily:'DM Sans,sans-serif', fontSize:'0.85rem' }}>
+                    No payments found.
+                  </div>
+                )}
+
+                {/* ✅ Payment rows — only after load */}
+                {!isPaymentsLoading && filteredPayments.map(payment => {
+                  const paymentDate = getPaymentDate(payment);
+                  const paymentStatus = payment.status || 'completed';
+                  const isDeleted = paymentStatus === 'deleted';
+                  
+                  return (
+                    <div key={payment._id} className="payment-row" style={{ opacity: isDeleted ? 0.5 : 1 }}>
+                      <div>
+                        <div style={{ color:'#fff', fontSize:'0.85rem' }}>
+                          {paymentDate.toLocaleDateString('en-IN')}
+                        </div>
+                        <div style={{ fontSize:'0.7rem', color:'#555', marginTop:'2px' }}>
+                          {paymentDate.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })}
+                        </div>
+                        {payment.receiptNumber && (
+                          <div style={{ fontSize:'0.65rem', color:'#444', marginTop:'2px', letterSpacing:'1px' }}>
+                            {payment.receiptNumber}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{
+                        fontFamily:"'Bebas Neue',sans-serif",
+                        fontSize:'1.2rem',
+                        letterSpacing:'1px',
+                        color: isDeleted ? '#ff6b6b' : '#C8F542',
+                        textDecoration: isDeleted ? 'line-through' : 'none',
+                      }}>
+                        ₹{payment.amount?.toLocaleString('en-IN')}
+                      </div>
+                      <div>
+                        <span className="badge" style={{ background:`${methodColor(payment.paymentMethod)}18`, color:methodColor(payment.paymentMethod) }}>
+                          {payment.paymentMethod}
+                        </span>
+                      </div>
+                      <div style={{ color:'#888', fontSize:'0.85rem' }}>
+                        {payment.paymentForMonths} mo{payment.paymentForMonths !== 1 ? 's' : ''}
+                      </div>
+                      <div>
+                        <span className="badge" style={{ background:`${statusColor(paymentStatus)}18`, color:statusColor(paymentStatus) }}>
+                          {paymentStatus}
+                        </span>
+                        {payment.deletedReason && (
+                          <div style={{ fontSize:'0.65rem', color:'#ff6b6b', marginTop:'4px' }}>
+                            {payment.deletedReason}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Total row */}
+                {!isPaymentsLoading && filteredPayments.length > 0 && (
+                  <div style={{ padding:'0.85rem 1.25rem', background:'#0a0a0a', borderTop:'1px solid rgba(255,255,255,0.08)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontSize:'0.65rem', color:'#555', letterSpacing:'2px', textTransform:'uppercase', fontFamily:'DM Sans,sans-serif' }}>
+                      Total Collected ({filteredPayments.filter(p => (p.status || 'completed') === 'completed').length} payments)
+                    </span>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'1.25rem', color:'#C8F542', letterSpacing:'1px' }}>
+                      ₹{filteredPayments.filter(p => (p.status || 'completed') === 'completed').reduce((s, p) => s + (p.amount || 0), 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Create / Edit Member Modal */}
-      {showForm && (
-        <div className="overlay" onClick={(e) => e.target === e.currentTarget && closeForm()}>
-          <div className="form-card">
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'2rem' }}>
-              <div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'2rem', letterSpacing:'2px' }}>
-                  {editingMember ? 'EDIT MEMBER' : 'ADD MEMBER'}
-                </div>
-                <div style={{ color:'#555', fontSize:'0.8rem', fontFamily:'DM Sans,sans-serif' }}>
-                  {editingMember ? 'Update member details' : 'Fill in member details'}
-                </div>
-              </div>
-              <button onClick={closeForm} style={{ background:'none', border:'none', color:'#666', cursor:'pointer', fontSize:'1.25rem' }}>✕</button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="form-grid">
-                <div>
-                  <label className="form-label">Full Name *</label>
-                  <input name="fullName" className="members-input" placeholder="John Doe" value={form.fullName} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="form-label">Email *</label>
-                  <input name="email" type="email" className="members-input" placeholder="john@email.com" value={form.email} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="form-label">Phone *</label>
-                  <input name="phone" className="members-input" placeholder="9876543210" value={form.phone} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="form-label">Gender</label>
-                  <select name="gender" className="members-input" value={form.gender} onChange={handleChange}>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="full">
-                  <label className="form-label">Address</label>
-                  <input name="address" className="members-input" placeholder="Street, City" value={form.address} onChange={handleChange} />
-                </div>
-                <div>
-                  <label className="form-label">Membership Plan *</label>
-                  <select name="membershipPlan" className="members-input" value={form.membershipPlan} onChange={handleChange} required>
-                    <option value="">Select plan</option>
-                    {plans.map(p => <option key={p._id} value={p._id}>{p.name} — ₹{p.price}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Status</label>
-                  <select name="status" className="members-input" value={form.status} onChange={handleChange}>
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="expired">Expired</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="suspended">Suspended</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Membership Start *</label>
-                  <input name="membershipStart" type="date" className="members-input" value={form.membershipStart} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="form-label">Membership End *</label>
-                  <input name="membershipEnd" type="date" className="members-input" value={form.membershipEnd} onChange={handleChange} required />
-                </div>
-                <div>
-                  <label className="form-label">Amount Paid (₹)</label>
-                  <input name="amountPaid" type="number" className="members-input" placeholder="0" value={form.amountPaid} onChange={handleChange} />
-                </div>
-                <div>
-                  <label className="form-label">Remaining Amount (₹)</label>
-                  <input name="remainingAmount" type="number" className="members-input" placeholder="0" value={form.remainingAmount} onChange={handleChange} />
-                </div>
-                <div>
-                  <label className="form-label">Payment Status</label>
-                  <select name="paymentStatus" className="members-input" value={form.paymentStatus} onChange={handleChange}>
-                    <option value="paid">Paid</option>
-                    <option value="pending">Pending</option>
-                    <option value="overdue">Overdue</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display:'flex', gap:'1rem', marginTop:'2rem' }}>
-                <button type="submit" className="btn-primary" disabled={isBusy}>
-                  {isBusy ? 'Saving...' : editingMember ? 'Update Member' : 'Create Member'}
-                </button>
-                <button type="button" className="btn-ghost" onClick={closeForm}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Payment Modal */}
+      {/* ── Payment Modal ── */}
       {payingMember && (
         <PaymentModal
           member={payingMember}
-          onClose={() => setPayingMember(null)}
+          onClose={() => {
+            setPayingMember(null);
+            // Refresh payments after modal closes
+            if (selectedMemberId) {
+              dispatch(fetchMemberPayments(selectedMemberId));
+            }
+          }}
         />
       )}
-
-      {successMessage && <div className="toast">{successMessage}</div>}
     </div>
   );
 }

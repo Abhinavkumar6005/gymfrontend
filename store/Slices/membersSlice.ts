@@ -260,17 +260,29 @@ const membersSlice = createSlice({
       })
 
       // ── fetchExpiringMembers ──────────────────────────────────────────────
-      // ✅ FIX: uses isLoadingExpiring so it doesn't block the main member table
-      .addCase(fetchExpiringMembers.pending, (state) => {
-        state.isLoadingExpiring = true; state.error = null;
-      })
-      .addCase(fetchExpiringMembers.fulfilled, (state, action) => {
-        state.isLoadingExpiring = false; state.expiringMembers = action.payload;
-      })
-      .addCase(fetchExpiringMembers.rejected, (state, action) => {
-        state.isLoadingExpiring = false; state.error = action.payload as string;
-      })
-
+      // // ✅ FIX: uses isLoadingExpiring so it doesn't block the main member table
+      // .addCase(fetchExpiringMembers.pending, (state) => {
+      //   state.isLoadingExpiring = true; state.error = null;
+      // })
+      // .addCase(fetchExpiringMembers.fulfilled, (state, action) => {
+      //   state.isLoadingExpiring = false; state.expiringMembers = action.payload;
+      // })
+      // .addCase(fetchExpiringMembers.rejected, (state, action) => {
+      //   state.isLoadingExpiring = false; state.error = action.payload as string;
+      // })
+// ✅ CORRECT in your slice
+.addCase(fetchExpiringMembers.pending, (state) => {
+  state.isLoadingExpiring = true;  // ← NOT isLoading
+  state.error = null;
+})
+.addCase(fetchExpiringMembers.fulfilled, (state, action) => {
+  state.isLoadingExpiring = false; // ← NOT isLoading
+  state.expiringMembers = action.payload;
+})
+.addCase(fetchExpiringMembers.rejected, (state, action) => {
+  state.isLoadingExpiring = false; // ← NOT isLoading
+  state.error = action.payload as string;
+})
       // ── fetchMembersByStatus ──────────────────────────────────────────────
       // ✅ FIX: was missing entirely — thunk dispatched but results were never stored
       .addCase(fetchMembersByStatus.pending, (state) => {
