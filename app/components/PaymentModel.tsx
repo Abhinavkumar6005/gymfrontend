@@ -50,7 +50,7 @@ export default function PaymentModal({ member, onClose }: PaymentModalProps) {
 
   const [tab, setTab] = useState<'pay' | 'history'>('pay');
   const [amount, setAmount] = useState<number>(0);
-  const [months, setMonths] = useState<number>(1);
+  const [months, setMonths] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>('cash');
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -277,7 +277,7 @@ export default function PaymentModal({ member, onClose }: PaymentModalProps) {
                     </div>
                     <div>
                       <label className="pay-label">Months *</label>
-                      <input type="number" min={1} max={24} className="pay-input" value={months} onChange={(e) => setMonths(Number(e.target.value))} required />
+                      <input type="number"  max={24} className="pay-input" value={months} onChange={(e) => setMonths(Number(e.target.value))} required />
                     </div>
                     <div style={{ gridColumn:'1/-1' }}>
                       <label className="pay-label">Payment Method</label>
